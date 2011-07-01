@@ -1,1 +1,22 @@
 MMM... Minimal Metal Models for JavaScript
+
+//look ma it's just JavaScript!
+function Geobit(options){
+    mmm.Model.call(options);
+    this.fields.longitude = new mmm.Field();
+    this.fields.latitude = new mmm.Field();
+}
+Geobit.prototype = new mmm.Model;
+Geobit.constructor = Geobit;
+
+//ooh that feels fresh and minimal!
+var geobit = new Geobit({longitude: 90, latitude: 70});
+geobit.set('longitude', 45);
+geobit.save(
+    function(){
+        alert('big success!');
+    },
+    function(){
+        alert('big douche!');
+    }
+);
