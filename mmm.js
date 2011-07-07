@@ -16,6 +16,7 @@ var mmm = {};
         this.fields = {
             id: new Field() 
         };
+        this.errors = [];
         this.setFields(options.fields || {});
     }
     Model.prototype = {
@@ -23,6 +24,13 @@ var mmm = {};
         getField: function(name){
             var field = this.fields[name];
             return (field) ? field.get() : undefined;
+        },
+        getFields: function(){
+            fields = {};
+            for(var field in this.fields){
+                fields[i] = field.get(field);
+            }
+            return fields;
         },
         setField: function(name, value){
             var field = this.fields[name];
