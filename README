@@ -5,13 +5,50 @@ function Geobit(options){
     mmm.Model.call(options);
     this.fields.longitude = new mmm.Field();
     this.fields.latitude = new mmm.Field();
+    this.fields.raw = new mmm.Field();
 }
 Geobit.prototype = new mmm.Model;
 Geobit.constructor = Geobit;
+//not all REST api's are equal
+Geobit.prototype.save = function(success, failure){
+    var method;
+    var data = this.getFields();
+    var model = this;
+    var path = 'http://geobacon.com/api/1.0/geobits';
+    if(this.getField('id')===undefined){
+        method = 'POST';
+    }else{
+        method = 'PUT';
+    }
+    $.ajax(path, {
+        type: method,
+        data: fields,
+        complete: function(xhr){
+            if(xhr.status==201){
+                try{
+                    var data = JSON.parse(xhr.responseText);
+                    if(data.id){
+                        model.setField('id', data.id);
+                        success();
+                    }else{
+                        model.errors.push('error getting id for create');
+                        failure();
+                    }
+                }catch(e){
+                    model.errors.push('could not process server response');
+                    failure();
+                }
+            }
+            if(xhr.status==400){
+                failure();
+            }
+        }
+    });
+};
 
-//ooh that feels fresh and minimal!
+//thanks for working with my api and letting me write a program
 var geobit = new Geobit({longitude: 90, latitude: 70});
-geobit.set('longitude', 45);
+geobit.setField('longitude', 45);
 geobit.save(
     function(){
         alert('big success!');
