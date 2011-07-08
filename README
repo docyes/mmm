@@ -1,59 +1,132 @@
-MMM... Minimal Metal Models for JavaScript
+//MMM... Minimal Metal Models for JavaScript
 
-//look ma it's just JavaScript!
+//Usage example of an MMM model
+var geobit = new Geobit({longitude: 90, latitude: 70});
+geobit.save(
+    function(model){
+        if(model.error.message){
+            alert('big douche!');
+        }else{
+            alert('big success!');
+        }
+    }
+);
+
+//Implementation of a sample Model
 function Geobit(options){
     mmm.Model.call(options);
     this.addField('longitude');
     this.addField('latitude');
     this.addField('raw');
+    this.addField('acl_token');
 }
 Geobit.prototype = new mmm.Model;
 Geobit.constructor = Geobit;
 //not all REST api's are equal
 Geobit.prototype.save = function(success, failure){
+    var that = this;
     var method;
-    var data = this.getFields();
-    var model = this;
-    var path = 'http://geobacon.com/api/1.0/geobits';
+    var url;
+    var fields;
+    var body = {};
     if(this.getField('id')===undefined){
         method = 'POST';
-    }else{
-        method = 'PUT';
-    }
-    $.ajax(path, {
-        type: method,
-        data: fields,
-        complete: function(xhr){
-            if(xhr.status==201){
-                try{
-                    var data = JSON.parse(xhr.responseText);
-                    if(data.id){
-                        model.setField('id', data.id);
-                        success();
-                    }else{
-                        model.errors.push('error getting id for create');
-                        failure();
-                    }
-                }catch(e){
-                    model.errors.push('could not process server response');
-                    failure();
-                }
-            }
-            if(xhr.status==400){
-                failure();
+        url = '/api/1.0/geobits';
+        fields = ['raw', 'longitude', 'latitude', 'parent_id'];
+        for(var postField in postFields){
+            var field = this.getField(postField);
+            if(field!==undefined){
+                body[postField] = field;
             }
         }
+    }else{
+        method = 'PUT';
+        url = '/api/1.0/geobits/' + this.getField('id');
+        fields = ['raw', 'longitude', 'latitude', 'parent_id', 'acl_token']
+        for(var putField in putFields){
+            var field = this.getField(putField);
+            if(field!==undefined){
+                body[putField] = field;
+            }
+        }
+    }
+    GeobaconRESTAdapter.request(url, method, 
+        function(response){
+            Geobit.setFieldsFromResponse(model, response);
+        }, 
+        {body: body}
+    );
+};
+//static helper for popluting model objects from a pre-formatted response
+Geobit.setFieldsFromResponse(model, response){
+    if('error' in response){
+        model.error = response.error;
+        return;
+    }
+    if(response.id){
+        model.setField('id', response.id);
+    }
+    var properties = response.properties;
+    if(properties){
+        model.setField('raw', properties.raw);
+        model.setField('parent_id', properties.parent_id);
+        model.setField('acl_token', properties.acl_token);
+    }
+    var geometry = response.geometry;
+    if(geometry && geometry.coordinates){
+        var coordinates = geometry.coordinates;
+        model.setField('longitude', coordinates[0]);
+        model.setField('latitude', coordinates[1]);
+    }
+};
+//retrieve a single item
+Geobit.get = function(id, longitude, latitude, distance, callback){
+    var url;
+    var getParams;
+    var path = '/api/1.0/geobits' + id;
+    var params = {
+        longitude: longitude,
+        latitude: latitude,
+        distance: distance
+    };
+    var model = new Geobit();
+    for(var param in params){
+        getParams += (getParams) ? '&' : '';
+        getParams += encodeURIComponent(param) + '=' + encodeURIComponent(params[param]);
+    }
+    url = path + '?' + getParams;
+    GeobaconRestAdapter.request(url, 'GET', function(response){
+        Geobit.setFieldsFromResponse(model, response);
+        callback(model);
     });
 };
-
-//thanks for working with my api and letting me write a program
-var geobit = new Geobit({longitude: 90, latitude: 70});
-geobit.setField('longitude', 45);
-geobit.save(
-    function(){
-        alert('big success!');
+//simple adapater for making XHR requests and handling responses
+var GeobaconRESTAdapter = {
+    hostname: 'http://geobacon.com',
+    request: function(url, method, callback, options){
+        var body = {};
+        var options = options || {};
+        var url = this.hostname + path;
+        if(options.body && (method=='POST' || method=='PUT')){
+            body = options.body;
+        }
+        var xhr = $.ajax(url, {
+            type: method, 
+            data: body, 
+            complete: function(xhr){
+                GeobaconRESTAdapter.response(xhr, callback);
+            }
+        );
     },
-    function(){
-        alert('big douche!');
+    response: function(xhr, callback){
+        var envelope = {};
+        try {
+            envelope = JSON.parse(xhr.responseText);
+        }catch(e){
+            envelope = {error: {message: 'Could not process request', params: []}};
+        }
+        callback(envelope);
     }
-);
+};
+
+
