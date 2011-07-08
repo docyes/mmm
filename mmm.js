@@ -25,7 +25,7 @@ var mmm = {};
             if(!(name in this.fields)){
                 this.fields[name] = new Field();
             }
-        }
+        },
         getField: function(name){
             var field = this.fields[name];
             return (field) ? field.get() : undefined;
