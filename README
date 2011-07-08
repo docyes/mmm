@@ -58,7 +58,7 @@ Geobit.prototype.save = function(success, failure){
     );
 };
 //static helper for popluting model objects from a pre-formatted response
-Geobit.setFieldsFromResponse(model, response){
+Geobit.setFieldsFromResponse = function(model, response){
     if('error' in response){
         model.error = response.error;
         return;
@@ -116,7 +116,7 @@ var GeobaconRESTAdapter = {
             complete: function(xhr){
                 GeobaconRESTAdapter.response(xhr, callback);
             }
-        );
+        });
     },
     response: function(xhr, callback){
         var envelope = {};
